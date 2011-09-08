@@ -96,29 +96,21 @@ static void property_operation(backlight_t *bklight, double cur, RROutput output
 	  if (info->range && info->num_values == 2) {
 	       min = info->values[0];
 	       max = info->values[1];
-	       if (operation == GetBrightness) {
-		    bklight->brightness =  (cur - min) * 100 / (max - min);
-	       } else {
+	       if (operation == SetBrightness) {
 		    double tmp = bklight->next_value * (max - min) / 100;
 		    double new = min + tmp;
-		    double step = 0.0;
-		    int i = 0;
 
-		    if (new > max) new = max;
-		    if (new < min) new = min;
-		    step = (new - cur) / 20;
+		    if (new > max) 
+			 new = max;
+		    if (new < min) 
+			 new = min;
 
-		    for (i = 0; i < 20; i++) {
-			 if (i == 19)
-			      cur = new;
-			 else
-			      cur += step;
-			 backlight_set (bklight, output, (long) cur);
-			 XFlush(bklight->display);
-			 usleep (200);
-		    }
-		    bklight->brightness = new;
+		    backlight_set (bklight, output, (long) new);
+		    XFlush(bklight->display);
+		    usleep (200);
+
 	       }
+	       bklight->brightness = (cur - min) * 100 / (max - min);
 	  }
 	  XFree(info);	  
      }
@@ -213,16 +205,11 @@ static gboolean open_display_and_check(backlight_t *bklight)
 
 }
 
-static void get_brightness_value(backlight_t *bklight)
+static int get_brightness_value(backlight_t *bklight)
 {
+     open_display_and_check(bklight);
      screen_walker(bklight, GetBrightness);
-}
-
-static gboolean focus_out_event(GtkWidget *widget, GdkEvent *event, backlight_t *bklight)
-{
-     gtk_widget_hide(bklight->dlg);
-     bklight->show = 0;
-     return FALSE;
+     return (int) bklight->brightness;
 }
 
 static void set_tooltip_text(backlight_t *bklight)
@@ -233,6 +220,15 @@ static void set_tooltip_text(backlight_t *bklight)
      gtk_widget_set_tooltip_text(bklight->mainw, s);
 }
 
+static gboolean focus_out_event(GtkWidget *widget, GdkEvent *event, backlight_t *bklight)
+{
+     gtk_widget_hide(bklight->dlg);
+     bklight->show = 0;
+     get_brightness_value(bklight);
+     set_tooltip_text(bklight);
+     return FALSE;
+}
+
 static gboolean tray_icon_press(GtkWidget *widget, GdkEventButton *event, backlight_t *bklight)
 {
      if( event->button == 3 ) { /* right button */
@@ -240,17 +236,17 @@ static gboolean tray_icon_press(GtkWidget *widget, GdkEventButton *event, backli
 	  gtk_menu_popup(popup, NULL, NULL, NULL, NULL, event->button, event->time);
 	  return TRUE;
      }
-
+     
      if (bklight->show == 0) {
-	  if (open_display_and_check(bklight)) {
-	       gtk_window_set_position(GTK_WINDOW(bklight->dlg), GTK_WIN_POS_MOUSE);
-	       gtk_widget_show_all(bklight->dlg);
-	       bklight->show = 1;
-	  }
+	  open_display_and_check(bklight);
+	  gtk_window_set_position(GTK_WINDOW(bklight->dlg), GTK_WIN_POS_MOUSE);
+	  gtk_widget_show_all(bklight->dlg);
+	  bklight->show = 1;
      } else {
 	  gtk_widget_hide(bklight->dlg);
 	  bklight->show = 0;
      }
+     get_brightness_value(bklight);
      set_tooltip_text(bklight);
      return TRUE;
 }
@@ -258,23 +254,9 @@ static gboolean tray_icon_press(GtkWidget *widget, GdkEventButton *event, backli
 static void on_vscale_value_changed(GtkRange *range, backlight_t *bklight)
 {
      // brightness_change
+     bklight->next_value = gtk_range_get_value(range);
      screen_walker(bklight, SetBrightness);
 }
-
-static void on_vscale_scrolled( GtkScale* scale, GdkEventScroll *evt, backlight_t* bklight )
-{
-     bklight->next_value = gtk_range_get_value((GtkRange*) scale);
-     switch( evt->direction ) {
-     case GDK_SCROLL_UP:
-	  bklight->next_value += 1;
-	  break;
-     case GDK_SCROLL_DOWN:
-	  bklight->next_value -= 1;
-	  break;
-     }
-     gtk_range_set_value((GtkRange*)scale, CLAMP((int) bklight->next_value, 0, 100) );
-}
-
 
 static void panel_init(Plugin *p)
 {
@@ -322,14 +304,15 @@ static void panel_init(Plugin *p)
      box = gtk_vbox_new(FALSE, 0);
 
      /* create controller */
-     bklight->vscale = gtk_vscale_new(GTK_ADJUSTMENT(gtk_adjustment_new(0, 0, 100, 0, 0, 0)));
+     get_brightness_value(bklight);
+
+     bklight->vscale = gtk_vscale_new(GTK_ADJUSTMENT(gtk_adjustment_new(get_brightness_value(bklight), 0, 100, 1, 10, 0)));
      gtk_scale_set_draw_value(GTK_SCALE(bklight->vscale), FALSE);
      gtk_range_set_inverted(GTK_RANGE(bklight->vscale), TRUE);
 
      bklight->vscale_handler = g_signal_connect ((gpointer) bklight->vscale, "value_changed",
 						 G_CALLBACK (on_vscale_value_changed),
 						 bklight);
-     g_signal_connect(bklight->vscale, "scroll-event", G_CALLBACK(on_vscale_scrolled), bklight);
 
      gtk_box_pack_start(GTK_BOX(box), bklight->vscale, TRUE, TRUE, 0);
      gtk_container_add(GTK_CONTAINER(frame), box);
@@ -390,12 +373,7 @@ static int backlight_constructor(Plugin *p, char **fp)
 
      gtk_widget_show_all(bklight->mainw);
 
-     bklight->brightness = -1;
-     if (open_display_and_check(bklight)) {
-	  get_brightness_value(bklight);
-
-	  set_tooltip_text(bklight);
-     }
+     set_tooltip_text(bklight);
 
      /* store the created plugin widget in plugin->pwid */
      p->pwid = bklight->mainw;
