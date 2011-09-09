@@ -27,4 +27,8 @@ src/.deps/
 src/Makefile
 src/Makefile.in
 stamp-h1
+src/.libs/
+src/backlight.la
+src/backlight.lo
+src/backlight.o
 
