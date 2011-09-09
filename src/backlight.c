@@ -16,6 +16,12 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+/**
+ * I use xbackligth and lxpanel-plugins as a referrence.
+ * [1] xbacklight: http://cgit.freedesktop.org/xorg/app/xbacklight
+ * [2] lxde: http://lxde.git.sourceforge.net/git/gitweb.cgi?p=lxde/lxpanel-plugins;a=summary
+ */
+
 #include <gtk/gtk.h>
 #include <stdlib.h>
 #include <glib.h>
@@ -26,7 +32,7 @@
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrandr.h>
 
-#define BACKLIGHT_ICON "/usr/share/icons/Fedora/22x22/places/start-here.png"
+#define BACKLIGHT_ICON "/usr/share/icons/hicolor/22x22/apps/bklight.png"
 
 typedef struct {
      Plugin* plugin;
