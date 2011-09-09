@@ -49,35 +49,41 @@ enum {
      SetBrightness,
 };
 
-static long backlight_get(backlight_t *bklight, RROutput output)
-{
+struct backlight_property {
+     Atom actual_type;
+     int actual_format;
      unsigned long nitems;
      unsigned long bytes_after;
      unsigned char *prop;
-     Atom actual_type;
-     int actual_format;
-     long value;
+};
+     
+static inline int set_property(backlight_t *bklight, RROutput output, 
+			struct backlight_property *property)
+{
+     return XRRGetOutputProperty(bklight->display, output, bklight->backlight_cur,
+				 0, 4, False, False, None,
+				 &property->actual_type, &property->actual_format,
+				 &property->nitems, &property->bytes_after, 
+				 &property->prop);
+}
+
+static long backlight_get(backlight_t *bklight, RROutput output)
+{
+     struct backlight_property prop = { 0 };
+     long value = 0;
     
      bklight->backlight_cur = bklight->backlight_new;
-     if (!bklight->backlight_cur ||
-	 XRRGetOutputProperty(bklight->display, output, bklight->backlight_cur,
-			       0, 4, False, False, None,
-			       &actual_type, &actual_format,
-			       &nitems, &bytes_after, &prop) != Success) {
+     if (!bklight->backlight_cur ||  set_property(bklight, output, &prop) != Success) {
 	  bklight->backlight_cur = bklight->backlight_legacy;
-	  if (!bklight->backlight_cur ||
-	      XRRGetOutputProperty(bklight->display, output, bklight->backlight_cur,
-				    0, 4, False, False, None,
-				    &actual_type, &actual_format,
-				    &nitems, &bytes_after, &prop) != Success)
+	  if (!bklight->backlight_cur || set_property(bklight, output, &prop) != Success)
 	       return -1;
      }
 
-     if (actual_type != XA_INTEGER || nitems != 1 || actual_format != 32)
+     if (prop.actual_type != XA_INTEGER || prop.nitems != 1 || prop.actual_format != 32)
 	  value = -1;
      else
-	  value = *((long *) prop);
-     XFree(prop);
+	  value = *((long *) prop.prop);
+     XFree(prop.prop);
      return value;
 }
 
@@ -306,8 +312,9 @@ static void panel_init(Plugin *p)
      /* create controller */
      get_brightness_value(bklight);
 
-     bklight->vscale = gtk_vscale_new(GTK_ADJUSTMENT(gtk_adjustment_new(get_brightness_value(bklight), 0, 100, 1, 10, 0)));
+     bklight->vscale = gtk_vscale_new(GTK_ADJUSTMENT(gtk_adjustment_new(get_brightness_value(bklight), 0, 100, 1.0, 10.0, 0)));
      gtk_scale_set_draw_value(GTK_SCALE(bklight->vscale), FALSE);
+//     gtk_scale_set_value_pos(GTK_SCALE(bklight->vscale), GTK_POS_TOP);
      gtk_range_set_inverted(GTK_RANGE(bklight->vscale), TRUE);
 
      bklight->vscale_handler = g_signal_connect ((gpointer) bklight->vscale, "value_changed",
