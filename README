@@ -1,3 +1,23 @@
-Example plugin...to help as an example fot writeing plugins
+LXDE applet - Brightness control
 
-how to can be found at: http://wiki.lxde.org/en/How_to_write_plugins_for_LXPanel
+At first, "./configure -> make -> make install" hasn't work fine yet so you need to install manually :( I'll fix it.
+Anyway, it requires lxpanel and libXrandr. If you use Fedora you need to install libXrandr-devel and lxpanel-devel packages.
+I tested it on Fedora 16 Beta TC1.
+
+1. Build
+ $ ./autogen.sh
+ $ ./configure
+ $ make
+ $ make DESTDIR=/path/to/temporary install
+ 
+2. Install
+ Check where lxpanel applets and icons are installed. For example, Fedora(x86_64) installs plugins are in /usr/lib64/lxpanel/plugins/ and icons are in /usr/share/lxpanel/images/ 
+ Then copy files 
+ # cp /path/to/temporary/usr/usr/lib/lxpanel/plugins/backlight.so /usr/lib64/lxpanel/plugins/.
+ # cp /path/to/source code directroy/data/bklight.png /usr/share/lxpanel/images/.
+ 
+3. Add applet
+ Add "Backlight Control" to your lxde panel
+
+
+
