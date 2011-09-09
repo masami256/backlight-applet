@@ -32,7 +32,7 @@
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrandr.h>
 
-#define BACKLIGHT_ICON "/usr/share/icons/hicolor/22x22/apps/bklight.png"
+#define BACKLIGHT_ICON "/usr/share/lxpanel/images/bklight.png"
 
 typedef struct {
      Plugin* plugin;
