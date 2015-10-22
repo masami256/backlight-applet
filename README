@@ -1,8 +1,11 @@
 LXDE applet - Brightness control
 
 At first, "./configure -> make -> make install" hasn't work fine yet so you need to install manually :( I'll fix it.
-Anyway, it requires lxpanel and libXrandr. If you use Fedora you need to install libXrandr-devel and lxpanel-devel packages.
-I tested it on Fedora 16 Beta TC1.
+Anyway, it requires lxpanel and libXrandr. If you use Fedora you need to install libXrandr-devel and lxpanel-devel, and intltool packages. Also it is nice to install development packages by group install.
+You can install development packages by following command.
+ sudo dnf group install "C Development Tools and Libraries"
+
+Build tested on Fedora 22. 
 
 1. Build
  $ ./autogen.sh
